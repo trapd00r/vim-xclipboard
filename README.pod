@@ -1,0 +1,32 @@
+=pod
+
+=head1 NAME
+
+xclipboard.vim - yank text from Vim to the X clipboard transparently
+
+=head1 DESCRIPTION
+
+B<xclipboard.vim> is a very simple script that defines two mappings for you:
+
+    <leader>w   send the current line to the named pipe
+    <leader>W   send the current buffer to the named pipe
+
+B<vim_xclipboard> is a daemon that sits and watches the named pipe for data.
+When data is retrieved, it's added to the X PRIMARY clipboard buffer. Now you
+can use C<shift+insert> or C<middleclick> to insert the just yanked text
+anywhere in X.
+
+Additionally, a persistent buffer in the form of a plain text file is kept in
+your $HOME directory.
+
+=head1 TODO
+
+=head2 Visual selection
+
+There's no mapping set for visual selections. I've tried really hard to get it
+working, but I'm not there yet. I'd love to get patches or suggestions for this
+bit.
+
+=head1 SEE ALSO
+
+L</clipbored | http://github.com/trapd00r/clipbored>

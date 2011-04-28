@@ -1,0 +1,150 @@
+#!/usr/bin/perl
+use strict;
+use warnings FATAL => 'all';
+
+our $VERSION = '0.010';
+my  $APP     = 'vim_xclipboard';
+
+use POSIX    qw(setsid);
+use IPC::Run qw(run timeout);
+use Getopt::Long;
+use Pod::Usage;
+
+my $opt;
+$opt->{pidfile}  = "/tmp/vim_xclipboard.pid";
+$opt->{vim_fifo} = "$ENV{HOME}/.vim/xclipboard.fifo";
+
+if(!-p $opt->{vim_fifo}) {
+  if(-e $opt->{vim_fifo}) {
+    die("$opt->{vim_fifo} exists but is not a fifo: aborting\n");
+  }
+
+  POSIX::mkfifo($opt->{vim_fifo}, 0666)
+    or die("Cant mkfifo($opt->{vim_fifo}: $!\n");
+}
+
+$opt->{vim_clipboard_history} = "$ENV{HOME}/.vim/xclipboard.history";
+$opt->{no_daemon} = 0;
+GetOptions(
+  'n|no-daemon' => \$opt->{no_daemon},
+  'k|kill'      => \&killkid,
+  'v|version'   => sub { printf("%s v%s\n", $APP, $VERSION); exit; },
+  'h|help'      => sub { pod2usage(verbose => 1, exitval => 0); exit; },
+  'm|man'       => sub { pod2usage(verbose => 3, exitval => 0); exit; },
+);
+
+if(-e $opt->{pidfile}) {
+  die("$APP is running! If not, remove $opt->{pidfile} and try again\n");
+}
+
+daemonize() unless $opt->{no_daemon};
+while(1) {
+  my $text = _read();
+  send_to_clipboard( $text ) if defined $text;
+
+  sleep 2;
+}
+
+sub _read {
+  open(my $pipe, '<', $opt->{vim_fifo}) or die("Failed to open pipe: $!\n");
+  return '' . <$pipe>;
+}
+
+
+sub send_to_clipboard {
+  my $data = shift;
+  my @echo = ('echo', $data);
+  my @c    = ('xclip');
+  run \@echo, '|', \@c;
+  print "$data";
+}
+
+
+sub daemonize {
+  my $PID = fork();
+  exit(0) if($PID); #parent
+  exit(1) if(!defined($PID)); # out of resources
+
+  setsid();
+  $PID = fork();
+  exit(1) if(!defined($PID));
+
+  if($PID) { # parent
+    waitpid($PID, 0);
+    unlink($opt->{pidfile}); # remove the lock when child have died
+    exit(0);
+  }
+  elsif($PID == 0) { # child
+    open(my $fh, '>', $opt->{pidfile})
+      or die("Cant open $opt->{pidfile}: $!\n");
+    print $fh $$;
+    close $fh;
+
+    open(STDOUT, '>>', $opt->{vim_clipboard_history});
+    open(STDERR, '>', '/dev/null');
+    open(STDIN,  '<', '/dev/null');
+  }
+}
+
+sub killkid {
+  open(my $fh, '<', $opt->{pidfile}) or return 1;
+  chomp(my $pid = <$fh>);
+  close($fh);
+
+  kill(9, $pid) or die("Cant kill $pid: $!\n");
+  print "$pid terminated.\n";
+  exit;
+}
+
+
+__END__
+
+
+=pod
+
+=head1 NAME
+
+vim_xclipboard - daemon waiting for input sent from Vim
+
+=head1 DESCRIPTION
+
+This is a daemon that sits and watches the named pipe defined in B<xclipboard.vim>
+for data sent from Vim. When data is retrieved, it's added to the X PRIMARY
+clipboard buffer.
+Now you can use C<shift+insert> or C<middleclick> to insert the just yanked text
+anywhere in X.
+
+=head1 OPTIONS
+
+    -n, --no-daemon  don't detach from the terminal
+    -k, --kill       kill a running instance
+    -v, --version    print version info and exit
+    -h, --help       show the help and exit
+    -m, --man        show the manpage and exit
+
+=head1 AUTHOR
+
+  Magnus Woldrich
+  CPAN ID: WOLDRICH
+  magnus@trapd00r.se
+  http://japh.se
+
+=head1 CONTRIBUTORS
+
+None required yet.
+
+=head1 REPORTING BUGS
+
+Report bugs and/or feature requests to <m@japh.se> or use the L<issue tracker|http://github.com/trapd00r/vim-xclipboard/issues>
+
+=head1 COPYRIGHT
+
+Copyright 2011 the B<vim-xclipboard> package L</AUTHOR> and L</CONTRIBUTORS> as
+listed above.
+
+=head1 LICENSE
+
+This application is free software; you may redistribute it and/or modify it
+under the same terms as Perl itself.
+
+=cut

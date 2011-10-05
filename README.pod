@@ -29,4 +29,4 @@ bit.
 
 =head1 SEE ALSO
 
-L<clipbored | http://github.com/trapd00r/clipbored>
+L<http://github.com/trapd00r/clipbored>

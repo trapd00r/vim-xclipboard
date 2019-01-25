@@ -1,6 +1,6 @@
 " xclipboard.vim
 " Author:         Magnus Woldrich <m@japh.se>
-" Version:        0.02
+" Version:        0.03
 
 if(exists("g:loaded_xclipboard"))
   finish

@@ -1,8 +1,9 @@
 #!/usr/bin/perl
+# vim:ft=perl:et:
 use strict;
 use warnings FATAL => 'all';
 
-our $VERSION = '0.010';
+our $VERSION = '0.012';
 my  $APP     = 'vim_xclipboard';
 
 use POSIX    qw(setsid);
